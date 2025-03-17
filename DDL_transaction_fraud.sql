@@ -17,7 +17,7 @@ CREATE TABLE cardholder (
 
 --Created a state code to save space and repititon.
 --Will need to be populated before used
-CREATE TABLE State (
+CREATE TABLE states (
     state_code CHAR(2) PRIMARY KEY,
     state_name VARCHAR(50) NOT NULL
 );
