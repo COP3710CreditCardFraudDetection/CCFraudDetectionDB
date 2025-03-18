@@ -1,16 +1,17 @@
 --TO DO: Add more check to each attribute and determine
 --whether or not each attribute has enough space allocated.
 
-
+CREATE TYPE gender_enum as ENUM ('Male', 'Female', 'Nonbinary', 'Other');
 
 CREATE TABLE cardholder (
 	cardholder_id INT PRIMARY KEY,
-	first_name VARCHAR(20) NOT NULL,
-	last_name VARCHAR(20) NOT NULL,
+	first_name VARCHAR(30) NOT NULL,
+	last_name VARCHAR(30) NOT NULL,
 	--DOB must be a valid date of birth 
 	dob DATE NOT NULL CHECK (dob < CURRENT_DATE AND dob > '1900-01-01'),
+	job VARCHAR(20) NOT NULL,
 	--User MUST choose an option, at the very least other. ENUM is best suited for this
-	gender ENUM('male', 'female', 'nonbinary', 'other') NOT NULL
+	gender gender_enum NOT NULL
 	
 );
 
@@ -34,9 +35,26 @@ CREATE TABLE cardholder_location (
     longitude DECIMAL(11,8) NOT NULL,
     city_pop NUMERIC(8,0) NOT NULL,
     FOREIGN KEY (cardholder_id) REFERENCES cardholder(cardholder_id),
-    FOREIGN KEY (state_code) REFERENCES State(state_code)
+    FOREIGN KEY (state_code) REFERENCES states(state_code)
 );
 
+--Created table to store merchant categories to avoid repitition.
+--Each merchant is a one-to-one relationship.
+--Must be populated before using
+CREATE TABLE merchant_category (
+	merchant_cat_id INT PRIMARY KEY,
+	category_name VARCHAR(32) NOT NULL
+);
+
+CREATE TABLE merchant (
+	merchant_id INT PRIMARY KEY,
+	merchant_name VARCHAR(32) NOT NULL,
+	merchant_cat_id INT,
+	merchant_lat DECIMAL(10,8) NOT NULL,
+	merchant_long DECIMAL(11,8) NOT NULL,
+
+	FOREIGN KEY (merchant_cat_id) REFERENCES merchant_category (merchant_cat_id)
+);
 
 CREATE TABLE transactions (
     transaction_id INT PRIMARY KEY,
@@ -50,24 +68,3 @@ CREATE TABLE transactions (
 	FOREIGN KEY (merchant_id) REFERENCES merchant (merchant_id)
 );
 
-
-CREATE TABLE merchant (
-	merchant_id INT PRIMARY KEY,
-	merchant_name VARCHAR(32) NOT NULL,
-	merchant_cat_id INT,
-	merchant_lat DECIMAL(10,8) NOT NULL,
-	merchant_long DECIMAL(11,8) NOT NULL,
-
-	FOREIGN KEY (merchant_cat_id) REFERENCES merchant_category (merchant_cat_id)
-);
-
---Created table to store merchant categories to avoid repitition.
---Each merchant is a one-to-one relationship.
---Must be populated before using
-CREATE TABLE merchant_category (
-	merchant_cat_id INT PRIMARY KEY,
-	merchant_id INT,
-	category_name VARCHAR(32) NOT NULL,
-	
-	FOREIGN KEY (merchant_id) REFERENCES merchant (merchant_id)
-);
