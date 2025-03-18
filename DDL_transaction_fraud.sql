@@ -1,6 +1,7 @@
 --TO DO: Add more check to each attribute and determine
 --whether or not each attribute has enough space allocated.
 
+
 CREATE TYPE gender_enum as ENUM ('Male', 'Female', 'Nonbinary', 'Other');
 
 CREATE TABLE cardholder (
@@ -9,7 +10,7 @@ CREATE TABLE cardholder (
 	last_name VARCHAR(30) NOT NULL,
 	--DOB must be a valid date of birth 
 	dob DATE NOT NULL CHECK (dob < CURRENT_DATE AND dob > '1900-01-01'),
-	job VARCHAR(20) NOT NULL,
+	job VARCHAR (30) NOT NULL,
 	--User MUST choose an option, at the very least other. ENUM is best suited for this
 	gender gender_enum NOT NULL
 	
