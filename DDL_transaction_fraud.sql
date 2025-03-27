@@ -29,6 +29,12 @@ CREATE TABLE states (
     state_name VARCHAR(50) NOT NULL
 );
 
+<<<<<<< HEAD
+=======
+--removed these:
+--ALTER TABLE cardholder_location
+--ALTER COLUMN city TYPE VARCHAR(50);
+>>>>>>> f7113044402dd42978a10fcb3acd44ac6c030022
 
 CREATE TABLE cardholder_location (
     location_id INT PRIMARY KEY,
