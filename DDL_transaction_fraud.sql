@@ -28,25 +28,28 @@ CREATE TABLE states (
     state_code CHAR(2) PRIMARY KEY,
     state_name VARCHAR(50) NOT NULL
 );
-
-<<<<<<< HEAD
-=======
---removed these:
---ALTER TABLE cardholder_location
---ALTER COLUMN city TYPE VARCHAR(50);
->>>>>>> f7113044402dd42978a10fcb3acd44ac6c030022
+ALTER TABLE cardholder_location
+ALTER COLUMN city TYPE VARCHAR(50);
 
 CREATE TABLE cardholder_location (
     location_id INT PRIMARY KEY,
     cardholder_id INT,
-    street VARCHAR(50) NOT NULL,
+    street VARCHAR(50) NOT NULL, 
+	city_id INT NOT NULL,
+    latitude DECIMAL(10,8) NOT NULL,
+    longitude DECIMAL(11,8) NOT NULL,
+	--Further optimization to reduce redundancy because all city details
+	--are relevant to each other.
+    FOREIGN KEY (cardholder_id) REFERENCES cardholder(cardholder_id),
+    FOREIGN KEY (city_id) REFERENCES city_details(city_id)
+);
+
+CREATE TABLE city_details (
+    city_id INT PRIMARY KEY,
     city VARCHAR(50) NOT NULL,
     state_code CHAR(2) NOT NULL,
     zip_code VARCHAR(10) NOT NULL,
-    latitude DECIMAL(10,8) NOT NULL,
-    longitude DECIMAL(11,8) NOT NULL,
     city_pop NUMERIC(8,0) NOT NULL,
-    FOREIGN KEY (cardholder_id) REFERENCES cardholder(cardholder_id),
     FOREIGN KEY (state_code) REFERENCES states(state_code)
 );
 
