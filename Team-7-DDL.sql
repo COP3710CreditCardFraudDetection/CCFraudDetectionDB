@@ -1,3 +1,15 @@
+DROP TABLE IF EXISTS 
+  transactions,
+  city_details,
+  cardholder_location, 
+  cardholder, 
+  merchant, 
+  merchant_category, 
+  occupation, 
+  states
+CASCADE;
+
+DROP TYPE IF EXISTS gender_enum CASCADE;
 
 
 -- Create an ENUM type for gender to ensure consistency in gender data
@@ -28,6 +40,17 @@ CREATE TABLE states (
     state_name VARCHAR(50) NOT NULL	-- Full state name
 );
 
+
+
+-- Added 3NF normalization for city details
+CREATE TABLE city_details (
+    city_id INT PRIMARY KEY,
+    city VARCHAR(50) NOT NULL,
+    state_code CHAR(2) NOT NULL,
+    zip_code VARCHAR(10) NOT NULL,
+    city_pop NUMERIC(8,0) NOT NULL,
+    FOREIGN KEY (state_code) REFERENCES states(state_code)
+);
 
 CREATE TABLE cardholder_location (
     location_id INT PRIMARY KEY,	-- Unique identifier for each location entry
