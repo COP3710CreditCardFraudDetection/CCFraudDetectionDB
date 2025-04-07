@@ -31,11 +31,12 @@ ORDER BY fraud_count DESC;
 
 
 ----6. Lists the locations with the highest amount of fradulent activity
-SELECT cl.city, COUNT(t.transaction_id) AS fraud_count 
+SELECT cd.city, COUNT(t.transaction_id) AS fraud_count 
 FROM transactions t
 JOIN cardholder_location cl ON t.cardholder_id = cl.cardholder_id
+JOIN city_details cd ON cl.city_id = cd.city_id
 WHERE t.is_fraud = TRUE
-GROUP BY cl.city
+GROUP BY cd.city
 ORDER BY fraud_count DESC
 LIMIT 10;
 
