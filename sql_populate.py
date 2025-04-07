@@ -1,12 +1,10 @@
 import pandas as pd
 
-
 def escape_str(val):
     """Escape single quotes for SQL string literals."""
     if isinstance(val, str):
         return val.replace("'", "''")
     return val
-
 
 # ------------- STATE INSERTS -------------
 states = {
@@ -46,17 +44,24 @@ for job, occ_id in job_to_occ_id.items():
     stmt = f"INSERT INTO occupation (occupation_id, job) VALUES ({occ_id}, '{escape_str(job)}');"
     occupation_inserts.append(stmt)
 
-# ------------- INITIALIZE OTHER COUNTERS -------------
+# ------------- INITIALIZE COUNTERS AND MAPPINGS -------------
 cardholder_id_counter = 1
 location_id_counter = 1
 merchant_id_counter = 1
+city_id_counter = 1
 merchant_cat_id_counter = 1
+
+# Dictionaries to track unique entries
+city_details_map = {}           # key: (city, state_code, zip_code, city_pop)
+merchant_category_map = {}      # key: category_name
+merchant_map = {}               # key: (merchant_name, merchant_cat_id)
 
 # Lists to hold SQL INSERT statements for each table
 cardholder_inserts = []
 location_inserts = []
-merchant_inserts = []
+city_details_inserts = []
 merchant_category_inserts = []
+merchant_inserts = []
 transactions_inserts = []
 
 # ------------- PROCESS EACH ROW -------------
@@ -87,7 +92,7 @@ for idx, row in df.iterrows():
         gender = "Other"
     street = row[9]
     city = row[10]
-    state_code = row[11]  # Should match a state code from the state table
+    state_code = row[11]  # Should match a state code from the states table
     zip_code = row[12]
     latitude = row[13]
     longitude = row[14]
@@ -102,46 +107,71 @@ for idx, row in df.iterrows():
     # Lookup occupation_id for the job
     occupation_id = job_to_occ_id[job]
 
-    # 1. INSERT for cardholder table (columns: cardholder_id, first_name, last_name, dob, occupation_id, gender)
+    # 1. INSERT for cardholder table
     cardholder_sql = (
         f"INSERT INTO cardholder (cardholder_id, first_name, last_name, dob, occupation_id, gender) "
         f"VALUES ({cardholder_id_counter}, '{escape_str(first_name)}', '{escape_str(last_name)}', '{escape_str(dob)}', {occupation_id}, '{escape_str(gender)}');"
     )
     cardholder_inserts.append(cardholder_sql)
 
-    # 2. INSERT for cardholder_location table
+    # 2. INSERT for city_details table (if not already inserted)
+    city_key = (city, state_code, zip_code, city_pop)
+    if city_key not in city_details_map:
+        city_details_map[city_key] = city_id_counter
+        city_details_sql = (
+            f"INSERT INTO city_details (city_id, city, state_code, zip_code, city_pop) "
+            f"VALUES ({city_id_counter}, '{escape_str(city)}', '{escape_str(state_code)}', '{escape_str(zip_code)}', {city_pop});"
+        )
+        city_details_inserts.append(city_details_sql)
+        assigned_city_id = city_id_counter
+        city_id_counter += 1
+    else:
+        assigned_city_id = city_details_map[city_key]
+
+    # 3. INSERT for cardholder_location table using city_id
     location_sql = (
-        f"INSERT INTO cardholder_location (location_id, cardholder_id, street, city, state_code, zip_code, latitude, longitude, city_pop) "
-        f"VALUES ({location_id_counter}, {cardholder_id_counter}, '{escape_str(street)}', '{escape_str(city)}', '{escape_str(state_code)}', '{escape_str(zip_code)}', {latitude}, {longitude}, {city_pop});"
+        f"INSERT INTO cardholder_location (location_id, cardholder_id, street, city_id, latitude, longitude) "
+        f"VALUES ({location_id_counter}, {cardholder_id_counter}, '{escape_str(street)}', {assigned_city_id}, {latitude}, {longitude});"
     )
     location_inserts.append(location_sql)
 
-    # 3. INSERT for merchant_category table (without merchant_id to avoid circular reference)
-    merchant_category_sql = (
-        f"INSERT INTO merchant_category (merchant_cat_id, category_name) "
-        f"VALUES ({merchant_cat_id_counter}, '{escape_str(category_name)}');"
-    )
-    merchant_category_inserts.append(merchant_category_sql)
+    # 4. INSERT for merchant_category table (de-duplicated)
+    if category_name not in merchant_category_map:
+        merchant_category_map[category_name] = merchant_cat_id_counter
+        merchant_category_sql = (
+            f"INSERT INTO merchant_category (merchant_cat_id, category_name) "
+            f"VALUES ({merchant_cat_id_counter}, '{escape_str(category_name)}');"
+        )
+        merchant_category_inserts.append(merchant_category_sql)
+        assigned_merchant_cat_id = merchant_cat_id_counter
+        merchant_cat_id_counter += 1
+    else:
+        assigned_merchant_cat_id = merchant_category_map[category_name]
 
-    # 4. INSERT for merchant table
-    merchant_sql = (
-        f"INSERT INTO merchant (merchant_id, merchant_name, merchant_cat_id, merchant_lat, merchant_long) "
-        f"VALUES ({merchant_id_counter}, '{escape_str(merchant_name)}', {merchant_cat_id_counter}, {merch_lat}, {merch_long});"
-    )
-    merchant_inserts.append(merchant_sql)
+    # 5. INSERT for merchant table (de-duplicated)
+    merchant_key = (merchant_name, assigned_merchant_cat_id)
+    if merchant_key not in merchant_map:
+        merchant_map[merchant_key] = merchant_id_counter
+        merchant_sql = (
+            f"INSERT INTO merchant (merchant_id, merchant_name, merchant_cat_id, merchant_lat, merchant_long) "
+            f"VALUES ({merchant_id_counter}, '{escape_str(merchant_name)}', {assigned_merchant_cat_id}, {merch_lat}, {merch_long});"
+        )
+        merchant_inserts.append(merchant_sql)
+        assigned_merchant_id = merchant_id_counter
+        merchant_id_counter += 1
+    else:
+        assigned_merchant_id = merchant_map[merchant_key]
 
-    # 5. INSERT for transactions table
+    # 6. INSERT for transactions table
     transaction_sql = (
         f"INSERT INTO transactions (transaction_id, cardholder_id, merchant_id, transaction_date, amount, unix_time, is_fraud) "
-        f"VALUES ({transaction_id}, {cardholder_id_counter}, {merchant_id_counter}, '{escape_str(transaction_date)}', {amount}, {unix_time}, {is_fraud});"
+        f"VALUES ({transaction_id}, {cardholder_id_counter}, {assigned_merchant_id}, '{escape_str(transaction_date)}', {amount}, {unix_time}, {is_fraud});"
     )
     transactions_inserts.append(transaction_sql)
 
-    # Update counters for the next row
+    # Update counters for cardholder and location
     cardholder_id_counter += 1
     location_id_counter += 1
-    merchant_id_counter += 1
-    merchant_cat_id_counter += 1
 
 # ------------- WRITE ALL INSERT STATEMENTS TO FILE -------------
 with open("archive/insert_statements.sql", "w", encoding="utf-8") as f:
@@ -151,6 +181,10 @@ with open("archive/insert_statements.sql", "w", encoding="utf-8") as f:
 
     f.write("\n-- Occupation Inserts\n")
     for stmt in occupation_inserts:
+        f.write(stmt + "\n")
+
+    f.write("\n-- City Details Inserts\n")
+    for stmt in city_details_inserts:
         f.write(stmt + "\n")
 
     f.write("\n-- Merchant Category Inserts\n")
