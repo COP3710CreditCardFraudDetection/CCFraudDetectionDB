@@ -4,7 +4,10 @@ SELECT * FROM transactions WHERE is_fraud = TRUE;
 
 
 ----2. Find the total fraudulent transactions
-SELECT COUNT(*) AS fraud_count FROM transactions WHERE is_fraud = TRUE;
+SELECT
+  COUNT(*) FILTER (WHERE is_fraud = true) AS fraud_count,
+  COUNT(*) AS total_transactions
+FROM transactions;
 
 
 ----3. Find the top 5 merchants with the most fraudulent transactions.
